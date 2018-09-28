@@ -1,0 +1,61 @@
+dist: trusty
+sudo: false
+language: rust
+
+cache:
+  - apt: true
+  - cargo: true
+
+branches:
+  only:
+    - master
+    - /^\d+\.\d+\.x$/
+
+matrix:
+  allow_failures:
+    - rust: nightly
+  fast_finish: true
+
+  include:
+    - rust: stable
+      before_script:
+        - rustup component add rustfmt-preview
+        - export CARGO_INCREMENTAL=0
+      script:
+        - cargo update
+        - cargo test --all-features
+        - cargo fmt -- --check
+        - if [[ "${TRAVIS_PULL_REQUEST_BRANCH:-}" = release-* ]]; then cargo package; fi
+
+    - rust: beta
+      before_script:
+        - export CARGO_INCREMENTAL=0
+      script:
+        - cargo update
+        - cargo test --all-features
+
+    - rust: nightly
+      before_script:
+        - export CARGO_INCREMENTAL=0
+      script:
+        - cargo update
+        - cargo test --all-features
+
+    - rust: stable
+      env: DEPLOY_API_DOC
+      before_script:
+      script:
+        - rm -rf target/doc
+        - cargo update
+        - cargo doc --all-features --no-deps
+        - rm -f target/doc/.lock
+        - echo '<meta http-equiv="refresh" content="0;URL=finchers_r2d2/index.html">' > target/doc/index.html
+      deploy:
+        provider: pages
+        skip_cleanup: true
+        github_token: $GH_TOKEN
+        repo: finchers-rs/finchers-r2d2
+        target_branch: gh-pages
+        local_dir: target/doc
+        on:
+          branch: master
