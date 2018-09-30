@@ -23,87 +23,15 @@ extern crate r2d2;
 extern crate tokio_executor;
 extern crate tokio_threadpool;
 
-pub use impl_endpoint::{pool_endpoint, PoolEndpoint};
+pub mod current_thread;
+
 #[doc(no_inline)]
 pub use r2d2::*;
 
-#[allow(missing_docs)]
-pub mod current_thread {
-    pub use self::imp::{pool_endpoint, PoolEndpoint};
+pub use imp::{pool_endpoint, PoolEndpoint};
 
-    mod imp {
-        use finchers::endpoint::{Context, Endpoint, EndpointResult};
-        use finchers::error;
-        use finchers::error::Error;
-
-        use futures::{Async, Future, Poll};
-        use r2d2::{ManageConnection, Pool, PooledConnection};
-        use std::fmt;
-
-        /// Create an endpoint which acquires the connection from the specified connection pool.
-        ///
-        /// This endpoint will block the current thread during retrieving the connection from pool.
-        pub fn pool_endpoint<M>(pool: Pool<M>) -> PoolEndpoint<M>
-        where
-            M: ManageConnection,
-        {
-            PoolEndpoint { pool }
-        }
-
-        #[allow(missing_docs)]
-        #[derive(Debug, Clone)]
-        pub struct PoolEndpoint<M: ManageConnection> {
-            pool: Pool<M>,
-        }
-
-        impl<'a, M> Endpoint<'a> for PoolEndpoint<M>
-        where
-            M: ManageConnection + 'a,
-        {
-            type Output = (PooledConnection<M>,);
-            type Future = PoolFuture<'a, M>;
-
-            fn apply(&'a self, _: &mut Context<'_>) -> EndpointResult<Self::Future> {
-                Ok(PoolFuture { endpoint: self })
-            }
-        }
-
-        pub struct PoolFuture<'a, M: ManageConnection> {
-            endpoint: &'a PoolEndpoint<M>,
-        }
-
-        impl<'a, M> fmt::Debug for PoolFuture<'a, M>
-        where
-            M: ManageConnection + fmt::Debug,
-            M::Connection: fmt::Debug,
-        {
-            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                f.debug_struct("PoolFuture")
-                    .field("endpoint", &self.endpoint)
-                    .finish()
-            }
-        }
-
-        impl<'a, M> Future for PoolFuture<'a, M>
-        where
-            M: ManageConnection,
-        {
-            type Item = (PooledConnection<M>,);
-            type Error = Error;
-
-            fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-                self.endpoint
-                    .pool
-                    .get()
-                    .map_err(error::fail)
-                    .map(|conn| Async::Ready((conn,)))
-            }
-        }
-    }
-}
-
-mod impl_endpoint {
-    use finchers::endpoint::{Context, Endpoint, EndpointResult};
+mod imp {
+    use finchers::endpoint::{ApplyContext, ApplyResult, Endpoint};
     use finchers::error;
     use finchers::error::Error;
 
@@ -112,7 +40,7 @@ mod impl_endpoint {
     use futures::{Async, Future, Poll};
     use r2d2::{ManageConnection, Pool, PooledConnection};
     use std::fmt;
-    use tokio_executor::{DefaultExecutor, Executor};
+    use tokio_executor::DefaultExecutor;
     use tokio_threadpool::blocking;
 
     /// Create an endpoint which acquires the connection from the specified connection pool.
@@ -126,7 +54,7 @@ mod impl_endpoint {
         PoolEndpoint { pool }
     }
 
-    #[allow(missing_docs)]
+    /// The endpoint which retrieves a connection from a connection pool.
     #[derive(Debug, Clone)]
     pub struct PoolEndpoint<M: ManageConnection> {
         pool: Pool<M>,
@@ -139,17 +67,18 @@ mod impl_endpoint {
         type Output = (PooledConnection<M>,);
         type Future = PoolFuture<'a, M>;
 
-        fn apply(&'a self, _: &mut Context<'_>) -> EndpointResult<Self::Future> {
+        fn apply(&'a self, _: &mut ApplyContext<'_>) -> ApplyResult<Self::Future> {
             Ok(PoolFuture {
                 endpoint: self,
-                rx: None,
+                handle: None,
             })
         }
     }
 
+    // not a public API.
     pub struct PoolFuture<'a, M: ManageConnection> {
         endpoint: &'a PoolEndpoint<M>,
-        rx: Option<oneshot::Receiver<Result<PooledConnection<M>, Error>>>,
+        handle: Option<oneshot::SpawnHandle<PooledConnection<M>, Error>>,
     }
 
     impl<'a, M> fmt::Debug for PoolFuture<'a, M>
@@ -160,7 +89,7 @@ mod impl_endpoint {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             f.debug_struct("PoolFuture")
                 .field("endpoint", &self.endpoint)
-                .field("rx", &self.rx)
+                .field("handle", &self.handle)
                 .finish()
         }
     }
@@ -174,13 +103,9 @@ mod impl_endpoint {
 
         fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
             loop {
-                if let Some(ref mut rx) = self.rx {
+                if let Some(ref mut handle) = self.handle {
                     trace!("retrieved the connection from spawned task");
-                    return match rx.poll() {
-                        Ok(Async::NotReady) => Ok(Async::NotReady),
-                        Ok(Async::Ready(res)) => res.map(|conn| Async::Ready((conn,))),
-                        Err(_canceled) => panic!(),
-                    };
+                    return handle.poll().map(|x| x.map(|conn| (conn,)));
                 }
 
                 if let Some(conn) = self.endpoint.pool.try_get() {
@@ -188,32 +113,14 @@ mod impl_endpoint {
                     return Ok(Async::Ready((conn,)));
                 } else {
                     trace!("spawning the task for executing blocking section");
-                    let rx = {
-                        let pool = self.endpoint.pool.clone();
-                        let (tx, rx) = oneshot::channel();
-                        let mut tx_opt = Some(tx);
-                        let future = poll_fn(move || {
-                            let result = match blocking(|| pool.get()) {
-                                Ok(Async::NotReady) => return Ok(Async::NotReady),
-                                Ok(Async::Ready(res)) => res.map_err(error::fail),
-                                Err(blocking_err) => Err(error::fail(blocking_err)),
-                            };
-                            tx_opt
-                                .take()
-                                .expect("the sender has already taken")
-                                .send(result)
-                                .unwrap_or_else(|_| panic!("failed to send the result"));
-                            Ok(Async::Ready(()))
-                        });
+                    let pool = self.endpoint.pool.clone();
+                    let future = poll_fn(move || match blocking(|| pool.get()) {
+                        Ok(Async::NotReady) => Ok(Async::NotReady),
+                        Ok(Async::Ready(res)) => res.map(Async::Ready).map_err(error::fail),
+                        Err(blocking_err) => Err(error::fail(blocking_err)),
+                    });
 
-                        DefaultExecutor::current()
-                            .spawn(Box::new(future))
-                            .map_err(error::fail)?;
-
-                        rx
-                    };
-
-                    self.rx = Some(rx);
+                    self.handle = Some(oneshot::spawn(future, &mut DefaultExecutor::current()));
                 }
             }
         }
