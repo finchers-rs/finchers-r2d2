@@ -1,9 +1,6 @@
-//! Connection pool support for Finchers
+//! Generic connection pooling support for Finchers, based on r2d2.
 
-// master
-#![doc(html_root_url = "https://finchers-rs.github.io/finchers-r2d2")]
-// released
-//#![doc(html_root_url = "https://docs.rs/finchers-r2d2/0.1.0")]
+#![doc(html_root_url = "https://finchers-rs.github.io/docs/finchers-r2d2/v0.1.0")]
 #![warn(
     missing_docs,
     missing_debug_implementations,

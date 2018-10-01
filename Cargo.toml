@@ -1,8 +1,35 @@
 [package]
 name = "finchers-r2d2"
-version = "0.1.0-dev"
+version = "0.1.0"
 authors = ["Yusuke Sasaki <yusuke.sasaki.nuem@gmail.com>"]
-publish = false
+description = """
+Generic connection pooling support for Finchers, based on r2d2.
+"""
+license = "MIT OR Apache-2.0"
+readme = "README.md"
+repository = "https://github.com/finchers-rs/finchers-r2d2.git"
+
+include = [
+  "Cargo.toml",
+  "build.rs",
+  "src/**/*",
+  "tests/**/*",
+  "examples/**/*",
+  "benches/**/*",
+  "LICENSE-MIT",
+  "LICENSE-APACHE",
+]
+
+[package.metadata.docs.rs]
+features = [
+  # FIXME: remove it as soon as the rustc version used in docs.rs is updated.
+  "extern-prelude",
+]
+
+[features]
+strict = []
+# FIXME: remove it as soon as the rustc version used in docs.rs is updated
+extern-prelude = []
 
 [dependencies]
 finchers = "0.12"
@@ -18,7 +45,3 @@ pretty_env_logger = "0.2.4"
 r2d2_sqlite = "0.6.0"
 rusqlite = "0.14.0"
 serde = { version = "1.0.79", features = ["derive"] }
-
-[patch.crates-io.finchers]
-git = "https://github.com/finchers-rs/finchers.git"
-tag = "v0.12.0"
