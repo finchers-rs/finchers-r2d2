@@ -51,13 +51,40 @@ mod imp {
     where
         M: ManageConnection,
     {
-        PoolEndpoint { pool }
+        PoolEndpoint {
+            pool,
+            preflight_before_spawn: true,
+        }
     }
 
     /// The endpoint which retrieves a connection from a connection pool.
     #[derive(Debug, Clone)]
     pub struct PoolEndpoint<M: ManageConnection> {
         pool: Pool<M>,
+        preflight_before_spawn: bool,
+    }
+
+    impl<M> PoolEndpoint<M>
+    where
+        M: ManageConnection,
+    {
+        /// Sets whether to call `Pool::try_get()` before spawning the task.
+        ///
+        /// The default value is `true`.
+        pub fn preflight_before_spawn(self, enabled: bool) -> Self {
+            Self {
+                preflight_before_spawn: enabled,
+                ..self
+            }
+        }
+
+        fn preflight(&self) -> Option<PooledConnection<M>> {
+            if self.preflight_before_spawn {
+                self.pool.try_get()
+            } else {
+                None
+            }
+        }
     }
 
     impl<'a, M> Endpoint<'a> for PoolEndpoint<M>
@@ -108,20 +135,20 @@ mod imp {
                     return handle.poll().map(|x| x.map(|conn| (conn,)));
                 }
 
-                if let Some(conn) = self.endpoint.pool.try_get() {
+                if let Some(conn) = self.endpoint.preflight() {
                     trace!("retrieved the connection without spawning the task");
                     return Ok(Async::Ready((conn,)));
-                } else {
-                    trace!("spawning the task for executing blocking section");
-                    let pool = self.endpoint.pool.clone();
-                    let future = poll_fn(move || match blocking(|| pool.get()) {
-                        Ok(Async::NotReady) => Ok(Async::NotReady),
-                        Ok(Async::Ready(res)) => res.map(Async::Ready).map_err(error::fail),
-                        Err(blocking_err) => Err(error::fail(blocking_err)),
-                    });
-
-                    self.handle = Some(oneshot::spawn(future, &mut DefaultExecutor::current()));
                 }
+
+                trace!("spawning the task for executing blocking section");
+                let pool = self.endpoint.pool.clone();
+                let future = poll_fn(move || match blocking(|| pool.get()) {
+                    Ok(Async::NotReady) => Ok(Async::NotReady),
+                    Ok(Async::Ready(res)) => res.map(Async::Ready).map_err(error::fail),
+                    Err(blocking_err) => Err(error::fail(blocking_err)),
+                });
+
+                self.handle = Some(oneshot::spawn(future, &DefaultExecutor::current()));
             }
         }
     }
