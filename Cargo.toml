@@ -21,15 +21,8 @@ include = [
 ]
 
 [package.metadata.docs.rs]
-features = [
-  # FIXME: remove it as soon as the rustc version used in docs.rs is updated.
-  "extern-prelude",
-]
-
-[features]
-strict = []
 # FIXME: remove it as soon as the rustc version used in docs.rs is updated
-extern-prelude = []
+rustdoc-args = ["--cfg", "finchers_inject_extern_prelude"]
 
 [dependencies]
 finchers = "0.12"

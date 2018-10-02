@@ -1,6 +1,9 @@
+// FIXME: remove this feature gate as soon as the rustc version used in docs.rs is updated
+#![cfg_attr(finchers_inject_extern_prelude, feature(extern_prelude))]
+
 //! Generic connection pooling support for Finchers, based on r2d2.
 
-#![doc(html_root_url = "https://finchers-rs.github.io/docs/finchers-r2d2/v0.1.0")]
+#![doc(html_root_url = "https://docs.rs/finchers-r2d2/0.1.0")]
 #![warn(
     missing_docs,
     missing_debug_implementations,
@@ -9,8 +12,8 @@
     unused,
 )]
 //#![warn(rust_2018_compatibility)]
-#![cfg_attr(feature = "strict", deny(warnings))]
-#![cfg_attr(feature = "strict", doc(test(attr(deny(warnings)))))]
+#![cfg_attr(finchers_deny_warnings, deny(warnings))]
+#![cfg_attr(finchers_deny_warnings, doc(test(attr(deny(warnings)))))]
 
 extern crate finchers;
 extern crate futures;
