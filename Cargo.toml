@@ -1,6 +1,6 @@
 [package]
 name = "finchers-r2d2"
-version = "0.1.1"
+version = "0.1.2-dev"
 authors = ["Yusuke Sasaki <yusuke.sasaki.nuem@gmail.com>"]
 description = """
 Generic connection pooling support for Finchers, based on r2d2.
