@@ -1,0 +1,10 @@
+(function() {var implementors = {};
+implementors["finchers_r2d2"] = [{text:"impl&lt;M&gt; <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/marker/trait.Sync.html\" title=\"trait core::marker::Sync\">Sync</a> for <a class=\"struct\" href=\"finchers_r2d2/struct.PoolEndpoint.html\" title=\"struct finchers_r2d2::PoolEndpoint\">PoolEndpoint</a>&lt;M&gt; <span class=\"where fmt-newline\">where<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;M as <a class=\"trait\" href=\"https://docs.rs/r2d2/0.8/r2d2/trait.ManageConnection.html\" title=\"trait r2d2::ManageConnection\">ManageConnection</a>&gt;::<a class=\"type\" href=\"https://docs.rs/r2d2/0.8/r2d2/trait.ManageConnection.html#associatedtype.Connection\" title=\"type r2d2::ManageConnection::Connection\">Connection</a>: <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/marker/trait.Send.html\" title=\"trait core::marker::Send\">Send</a>,&nbsp;</span>",synthetic:true,types:["finchers_r2d2::imp::PoolEndpoint"]},{text:"impl&lt;M&gt; <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/marker/trait.Sync.html\" title=\"trait core::marker::Sync\">Sync</a> for <a class=\"struct\" href=\"finchers_r2d2/current_thread/struct.PoolEndpoint.html\" title=\"struct finchers_r2d2::current_thread::PoolEndpoint\">PoolEndpoint</a>&lt;M&gt; <span class=\"where fmt-newline\">where<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;M as <a class=\"trait\" href=\"https://docs.rs/r2d2/0.8/r2d2/trait.ManageConnection.html\" title=\"trait r2d2::ManageConnection\">ManageConnection</a>&gt;::<a class=\"type\" href=\"https://docs.rs/r2d2/0.8/r2d2/trait.ManageConnection.html#associatedtype.Connection\" title=\"type r2d2::ManageConnection::Connection\">Connection</a>: <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/marker/trait.Send.html\" title=\"trait core::marker::Send\">Send</a>,&nbsp;</span>",synthetic:true,types:["finchers_r2d2::current_thread::imp::PoolEndpoint"]},];
+
+            if (window.register_implementors) {
+                window.register_implementors(implementors);
+            } else {
+                window.pending_implementors = implementors;
+            }
+        
+})()

@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["pool_endpoint","Create an endpoint which acquires the connection from the specified connection pool."]],"mod":[["current_thread","The implementation of PoolEndpoint which works on the current thread."]],"struct":[["PoolEndpoint","The endpoint which retrieves a connection from a connection pool."]]});
