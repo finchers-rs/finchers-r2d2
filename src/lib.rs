@@ -3,7 +3,7 @@
 
 //! Generic connection pooling support for Finchers, based on r2d2.
 
-#![doc(html_root_url = "https://docs.rs/finchers-r2d2/0.1.1")]
+#![doc(html_root_url = "https://docs.rs/finchers-r2d2/0.1.2")]
 #![warn(
     missing_docs,
     missing_debug_implementations,
