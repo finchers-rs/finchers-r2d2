@@ -3,11 +3,14 @@ name = "finchers-r2d2"
 version = "0.1.2-dev"
 authors = ["Yusuke Sasaki <yusuke.sasaki.nuem@gmail.com>"]
 description = """
+[DEPRECATED]
 Generic connection pooling support for Finchers, based on r2d2.
 """
 license = "MIT OR Apache-2.0"
 readme = "README.md"
 repository = "https://github.com/finchers-rs/finchers-r2d2.git"
+
+maintainance = { status = "deprecated" }
 
 include = [
   "Cargo.toml",
